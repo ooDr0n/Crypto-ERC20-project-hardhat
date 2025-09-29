@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Crypto Demo: ERC20 + Hardhat + Frontend</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.6.4/dist/ethers.min.js"></script>
+</head>
+<body>
+  <h1>Crypto Demo: ERC20 + Hardhat + Simple Frontend</h1>
+  <button id="connect">Connect Wallet</button>
+  <input id="contract" placeholder="Contract address">
+  <button id="load">Load Token Info</button>
+  <div id="status"></div>
+  <div id="info"></div>
+  <script>
+  (async ()=>{
+    let provider, signer;
+    const connectBtn = document.getElementById('connect');
+    const loadBtn = document.getElementById('load');
+    const status = document.getElementById('status');
+    const info = document.getElementById('info');
+
+    if(window.ethereum){
+      provider = new ethers.BrowserProvider(window.ethereum);
+    } else {
+      status.innerText = 'No Web3 wallet detected. Use MetaMask.';
+    }
+
+    connectBtn.onclick = async ()=>{
+      try{
+        await provider.send('eth_requestAccounts', []);
+        signer = await provider.getSigner();
+        const address = await signer.getAddress();
+        status.innerText = 'Connected: ' + address;
+      }catch(e){
+        status.innerText = 'Connection error: ' + e.message;
+      }
+    }
+
+    loadBtn.onclick = async ()=>{
+      const addr = document.getElementById('contract').value.trim();
+      if(!addr) return alert('Enter contract address');
+      const abi = [
+        'function name() view returns (string)',
+        'function symbol() view returns (string)',
+        'function decimals() view returns (uint8)',
+        'function totalSupply() view returns (uint256)',
+        'function balanceOf(address) view returns (uint256)'
+      ];
+      try{
+        const contract = new ethers.Contract(addr, abi, provider);
+        const name = await contract.name();
+        const symbol = await contract.symbol();
+        const decimals = await contract.decimals();
+        const total = await contract.totalSupply();
+        info.innerHTML = `<p>Name: ${name} (${symbol})</p><p>Total supply: ${total.toString()}</p>`;
+        if(signer){
+          const me = await signer.getAddress();
+          const bal = await contract.balanceOf(me);
+          info.innerHTML += `<p>Your balance: ${bal.toString()}</p>`;
+        }
+      }catch(e){
+        info.innerText = 'Error: ' + e.message;
+      }
+    }
+  })();
+  </script>
+</body>
+</html>
